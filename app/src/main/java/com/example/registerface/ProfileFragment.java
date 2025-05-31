@@ -219,7 +219,7 @@ public class ProfileFragment extends Fragment {
     private void displayFaceData(String faceData, float similarity) {
         if (faceData != null) {
             // Отображаем процент схожести
-            binding.faceSimilarityText.setText(String.format("Схожесть лица: %.1f%%", similarity * 100));
+            binding.faceSimilarityText.setText(String.format("Схожесть лица: %.1f%%", similarity * 5));
 
             // Парсим и отображаем данные о лице
             Map<String, String> features = parseFaceData(faceData);

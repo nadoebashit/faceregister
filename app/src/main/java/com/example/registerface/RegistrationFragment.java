@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +15,9 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -52,9 +57,9 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        
+
         dbHelper = new DatabaseHelper(getContext());
-        
+
         userIdInput = binding.userIdInput;
         nameInput = binding.nameInput;
         emailInput = binding.emailInput;
@@ -84,6 +89,16 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
                 return;
             }
 
+            if (!isValidUserId(userId)) {
+                Toast.makeText(getContext(), "User ID must contain only numbers", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                Toast.makeText(getContext(), "Please enter a valid email address", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             Log.d(TAG, "Registering user with face data: " + capturedFaceData);
             User user = new User(userId, capturedFaceData, name, email);
             if (dbHelper.addUser(user)) {
@@ -93,19 +108,20 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
                         .navigate(R.id.action_registration_to_login);
             } else {
                 Log.e(TAG, "Failed to register user");
-                Toast.makeText(getContext(), "Registration failed. User ID might already exist.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Registration failed. User ID might already exist.", Toast.LENGTH_SHORT)
+                        .show();
             }
         });
     }
 
     private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void requestCameraPermission() {
         ActivityCompat.requestPermissions(requireActivity(),
-                new String[]{Manifest.permission.CAMERA},
+                new String[] { Manifest.permission.CAMERA },
                 REQUEST_CAMERA_PERMISSION);
     }
 
@@ -113,7 +129,7 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
         isScanning = true;
         scanFaceButton.setText("Stop Scanning");
         previewView.setVisibility(View.VISIBLE);
-        
+
         cameraHelper = new CameraHelper(requireContext(), previewView, this);
         cameraHelper.startCamera(getViewLifecycleOwner());
     }
@@ -122,7 +138,7 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
         isScanning = false;
         scanFaceButton.setText("Scan Face");
         previewView.setVisibility(View.GONE);
-        
+
         if (cameraHelper != null) {
             cameraHelper.shutdown();
         }
@@ -143,16 +159,20 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
             }
 
             // Проверяем качество захвата лица
-            if (face.getSmilingProbability() != null && 
-                face.getLeftEyeOpenProbability() != null && 
-                face.getRightEyeOpenProbability() != null) {
+            if (face.getSmilingProbability() != null &&
+                    face.getLeftEyeOpenProbability() != null &&
+                    face.getRightEyeOpenProbability() != null) {
                 requireActivity().runOnUiThread(() -> {
+                    Toast.makeText(getContext(), "Scanning...", Toast.LENGTH_SHORT).show();
+
                     Toast.makeText(getContext(), "Face captured successfully!", Toast.LENGTH_SHORT).show();
                     stopFaceScanning();
+
                 });
             } else {
                 requireActivity().runOnUiThread(() -> {
-                    Toast.makeText(getContext(), "Please look directly at the camera and try again", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getContext(), "Please look directly at the camera and try again", Toast.LENGTH_LONG)
+                            .show();
                 });
             }
         }
@@ -175,4 +195,13 @@ public class RegistrationFragment extends Fragment implements FaceDetectorHelper
         }
         binding = null;
     }
-} 
+
+    private boolean isValidEmail(String email) {
+        String emailPattern = "[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+";
+        return email != null && email.matches(emailPattern);
+    }
+
+    private boolean isValidUserId(String userId) {
+        return userId != null && userId.matches("\\d+");
+    }
+}

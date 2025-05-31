@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +15,9 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -51,9 +56,9 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        
+
         dbHelper = new DatabaseHelper(getContext());
-        
+
         userIdInput = binding.userIdInput;
         loginButton = binding.loginButton;
         scanFaceButton = binding.scanFaceButton;
@@ -89,8 +94,9 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
             if (user != null) {
                 Log.d(TAG, "Stored face data: " + user.getFaceData());
                 Log.d(TAG, "Captured face data: " + capturedFaceData);
-                
-                FaceDetectorHelper.FaceComparisonResult result = FaceDetectorHelper.compareFaces(user.getFaceData(), capturedFaceData);
+
+                FaceDetectorHelper.FaceComparisonResult result = FaceDetectorHelper.compareFaces(user.getFaceData(),
+                        capturedFaceData);
                 String similarityMessage = String.format("Face similarity: %.1f%%", result.similarityPercentage);
                 Log.d(TAG, "Face similarity percentage: " + result.similarityPercentage);
 
@@ -103,7 +109,7 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
                     bundle.putString("email", user.getEmail());
                     bundle.putFloat("faceSimilarity", result.similarityPercentage);
                     Log.d(TAG, "Passing face similarity to profile: " + result.similarityPercentage);
-                    
+
                     NavHostFragment.findNavController(LoginFragment.this)
                             .navigate(R.id.action_login_to_profile, bundle);
                 } else {
@@ -116,13 +122,13 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
     }
 
     private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED;
+        return ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void requestCameraPermission() {
         ActivityCompat.requestPermissions(requireActivity(),
-                new String[]{Manifest.permission.CAMERA},
+                new String[] { Manifest.permission.CAMERA },
                 REQUEST_CAMERA_PERMISSION);
     }
 
@@ -130,7 +136,7 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
         isScanning = true;
         scanFaceButton.setText("Stop Scanning");
         previewView.setVisibility(View.VISIBLE);
-        
+
         cameraHelper = new CameraHelper(requireContext(), previewView, this);
         cameraHelper.startCamera(getViewLifecycleOwner());
     }
@@ -139,7 +145,7 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
         isScanning = false;
         scanFaceButton.setText("Scan Face");
         previewView.setVisibility(View.GONE);
-        
+
         if (cameraHelper != null) {
             cameraHelper.shutdown();
         }
@@ -183,4 +189,4 @@ public class LoginFragment extends Fragment implements FaceDetectorHelper.FaceDe
         }
         binding = null;
     }
-} 
+}
